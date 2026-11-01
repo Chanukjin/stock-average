@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b2c">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>주식 평단가 계산기 | 분할매수 · 목표평단 역산</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1422; --panel:#142137; --panel2:#192840; --border:#2b3e58; --muted:#9aabc1; --text:#f2f6fb; --mint:#73f0cd; --mintDark:#113a3b; --amber:#f9c477; --red:#ff899d; --blue:#9bbcff; }
+    * { box-sizing:border-box; }
+    html { min-height:100%; background:var(--bg); }
+    body { margin:0; min-height:100vh; font-family:Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color:var(--text); background:radial-gradient(ellipse 780px 540px at 6% -10%,#21425b 0%,transparent 70%),radial-gradient(ellipse 630px 460px at 100% 8%,#20314e 0%,transparent 68%),var(--bg); font-variant-numeric:tabular-nums; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,input:focus-visible,a:focus-visible { outline:3px solid var(--mint); outline-offset:3px; }
+    a { color:var(--mint); }
+    .hidden { display:none !important; }
+    #app,#denied { display:none; }
+    html[data-gate="allowed"] #app { display:block; }
+    html[data-gate="blocked"] #denied { display:flex; }
+    .container { width:min(1180px,calc(100% - 40px)); margin:0 auto; }
+    .header { padding:42px 0 30px; display:flex; flex-wrap:wrap; align-items:flex-start; gap:24px; justify-content:space-between; }
+    .eyebrow { font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; color:var(--mint); display:flex; align-items:center; gap:8px; }
+    .eyebrow:before { content:''; width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 16px #73f0cdbd; }
+    h1 { font-size:clamp(30px,4vw,45px); line-height:1.2; letter-spacing:-.055em; margin:14px 0 11px; }
+    .subtitle { margin:0; color:#b4c4d8; font-size:15px; line-height:1.7; }
+    .top-badge { border:1px solid #397969; padding:11px 14px; background:#16362f; border-radius:999px; color:var(--mint); font-size:12px; font-weight:800; white-space:nowrap; }
+    .dashboard { display:grid; grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr); gap:18px; align-items:start; padding-bottom:24px; }
+    .stack { display:grid; gap:18px; min-width:0; }
+    .panel { background:linear-gradient(155deg,#17253b 0%,#121f33 100%); border:1px solid var(--border); border-radius:22px; padding:26px; box-shadow:0 10px 34px #0000001e; min-width:0; }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:21px; }
+    .panel-header h2 { font-size:18px; letter-spacing:-.025em; margin:0; }
+    .num { color:var(--mint); font-weight:900; margin-right:9px; font-size:13px; }
+    .hint { color:var(--muted); font-size:12px; line-height:1.7; }
+    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+    .field { display:flex; flex-direction:column; gap:9px; min-width:0; }
+    label { color:#c7d4e6; font-weight:700; font-size:13px; }
+    .field-control { display:flex; align-items:center; gap:8px; border:1px solid #354861; border-radius:12px; padding:0 12px; background:#0d192b; min-height:52px; transition:border-color .2s; }
+    .field-control:focus-within { border-color:var(--mint); box-shadow:0 0 0 3px #73f0cd17; }
+    .field-control input { outline:none; border:0; min-width:0; width:100%; background:transparent; color:var(--text); font-size:18px; font-weight:800; text-align:right; font-variant-numeric:tabular-nums; padding:12px 0; }
+    .field-control input::placeholder { color:#60758d; font-weight:400; }
+    .field-control input:focus-visible { outline:none; }
+    .suffix { color:#a4b5c9; font-size:13px; font-weight:700; flex:none; }
+    .divider { height:1px; background:#2b3b51; margin:22px 0; }
+    .row-heading { display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px; }
+    .small-caption { margin:16px 0 0; color:var(--muted); font-size:12px; line-height:1.7; }
+    .buy-table { display:grid;gap:9px; }
+    .buy-row { display:grid; grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 32px; gap:9px; align-items:end; }
+    .buy-row .field { gap:6px; }
+    .buy-row .field-control { min-height:46px; padding:0 8px; }
+    .buy-row input { font-size:15px; }
+    .buy-row label { font-size:11px; }
+    .row-index { color:#a9bdd4; font-size:12px; font-weight:900; padding-bottom:14px; text-align:center; }
+    .icon-button { height:42px; width:32px; background:transparent; color:#b9c9da; border:1px solid #34465c; border-radius:10px; font-size:21px; line-height:1; }
+    .icon-button:hover { color:#ffb0b9;border-color:#ff899d; }
+    .row-actions { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:15px; flex-wrap:wrap; }
+    .btn { border:0; padding:12px 16px; border-radius:11px; font-size:13px; font-weight:800; transition:opacity .2s, transform .2s; }
+    .btn:active { transform:translateY(1px); }
+    .btn-primary { background:var(--mint); color:#072822; }
+    .btn-secondary { background:#20354b; color:#d8e8f8; border:1px solid #3c536c; }
+    .btn-ghost { background:transparent;color:#a7bbd2;border:0; }
+    .btn:hover { opacity:.88; }
+    .value-panel { border-color:#39665f; background:linear-gradient(145deg,#183c3c 0%,#172638 48%,#142138 100%); position:relative; overflow:hidden; }
+    .value-panel:before { content:''; position:absolute; width:280px;height:280px; border-radius:50%; background:#3db99c16; right:-110px;top:-150px;pointer-events:none; }
+    .big-caption { font-size:13px; color:#c0d2dc; position:relative; }
+    .hero-value { font-size:clamp(36px,5vw,55px); margin:10px 0 8px; letter-spacing:-.055em; color:var(--mint); font-weight:900; position:relative; white-space:nowrap; }
+    .hero-value .unit { font-size:21px; margin-left:3px; color:#b6dacc; }
+    .comparison { display:flex; align-items:center; flex-wrap:wrap; gap:10px; color:#b4cbd7; font-size:13px; margin:0 0 20px; }
+    .comparison .old-price { font-size:15px; color:#e3edf5;font-weight:700; }
+    .comparison .arrow { color:var(--mint); }
+    .delta { padding:5px 9px;background:#1c3441;border-radius:6px;color:var(--mint);font-weight:800;font-size:12px; }
+    .metric-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+    .metric { background:#0e2032b0; border:1px solid #2c4751; border-radius:12px;padding:14px;min-width:0; }
+    .metric-title { font-size:12px;color:#a8becb;margin-bottom:8px; }
+    .metric-value { font-size:18px;font-weight:850;letter-spacing:-.02em;overflow-wrap:anywhere; }
+    .result-note { margin:18px 0 0; color:#b3c6d3;font-size:12px;line-height:1.7; }
+    .warn { display:none; margin-top:14px; color:#ffdbac; background:#3c3026; border:1px solid #856b4a; border-radius:10px;padding:11px 12px; font-size:12px;line-height:1.6; }
+    .warn.show {display:block;}
+    .profit-box { margin-top:17px; padding:13px 16px; border-radius:12px; background:#122d3e; display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .profit-box span { font-size:12px;color:#b4cbd7; }
+    .profit-box strong { font-size:19px; color:var(--text); }
+    .profit-box strong.negative { color:var(--red); }
+    .profit-box strong.positive { color:var(--mint); }
+    .small-top { margin:0 0 12px; font-size:13px; color:#b4c7dc;line-height:1.7; }
+    .inverse-output { margin-top:18px; border:1px solid #3b5166; background:#0c1b2d; padding:16px; border-radius:13px; }
+    .inverse-top { display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap; }
+    .inverse-output .big {font-weight:900;font-size:28px;color:var(--mint);}
+    .inverse-output .sub { font-size:12px;color:var(--muted); line-height:1.8; margin-top:8px; }
+    footer { text-align:center; padding:8px 0 42px; color:#8e9fb4; font-size:12px; line-height:1.8; }
+    .denied { min-height:100vh; align-items:center;justify-content:center;padding:24px; }
+    .denied-card { text-align:center; max-width:500px;width:100%; border:1px solid #354c66; border-radius:24px;padding:42px 28px;background:#17253b; box-shadow:0 18px 55px #0005; }
+    .lock { display:inline-grid;place-items:center;width:62px;height:62px;border-radius:18px;background:#314054;color:var(--amber);font-size:29px;margin-bottom:12px; }
+    .denied-card h2 {font-size:24px;margin:6px 0 13px;}
+    .denied-card p {color:#aabbce;line-height:1.8;font-size:14px;margin:0 0 26px;}
+    .denied-card small {display:block;color:#8196b1;font-size:12px;line-height:1.7;margin-top:16px;}
+    .denied-card .btn { display:inline-block;text-decoration:none;padding:14px 23px; }
+    @media(max-width:880px) { .dashboard{grid-template-columns:1fr;} .header{padding:30px 0 22px;} }
+    @media(max-width:540px) { .container{width:calc(100% - 24px)} .panel{padding:19px;border-radius:17px} .header{gap:10px} h1{font-size:30px} .subtitle{font-size:13px;} .top-badge{font-size:11px;padding:8px 12px} .field-grid{gap:9px} .field-control{min-height:47px;padding:0 9px} .field-control input{font-size:15px} .suffix{font-size:11px} .buy-row{grid-template-columns:21px minmax(0,1fr) minmax(0,1fr) 28px;gap:6px} .buy-row .field-control{padding:0 5px} .buy-row input{font-size:14px} .row-index{font-size:10px} .icon-button{width:28px;} .hero-value{font-size:43px;} .metric{padding:12px} .metric-value{font-size:16px} .row-actions .btn{padding:10px 12px} }
+    @media(prefers-reduced-motion:reduce) { *{transition:none!important;} }
+  </style>
+  <script>
+    // GitHub Pages용 브라우저 유입 경로 검사 (보안 인증 아님).
+    // 허용: PC/모바일의 지정된 네이버 글. 기본 referrer 정책상 도메인만 오는 경우
+    // 블로그에 게시된 전용 링크의 ?via= 값까지 함께 검사합니다.
+    (function () {
+      'use strict';
+      const POST_OWNER = 'jinchanuk';
+      const POST_ID = '224461131306';
+      const MARKER = POST_OWNER + '-' + POST_ID;
+      const SESSION_KEY = 'stock_avg_naver_blog_entry_v1';
+      const TTL = 12 * 60 * 60 * 1000;
+      const blogHosts = new Set(['blog.naver.com','m.blog.naver.com']);
+      const extraHosts = new Set(['l.blog.naver.com']);
+
+      function sourceType(raw) {
+        if (!raw) return 'none';
+        try {
+          const u = new URL(raw);
+          const hostname = u.hostname.toLowerCase();
+          if (u.protocol !== 'https:' || (!blogHosts.has(hostname) && !extraHosts.has(hostname))) return 'other';
+          const path = u.pathname.replace(/\/+$/, '') || '/';
+          if (blogHosts.has(hostname) && path.toLowerCase() === ('/' + POST_OWNER + '/' + POST_ID)) return 'exact';
+          if (blogHosts.has(hostname) && /^\/PostView\.naver$/i.test(path) &&
+              (u.searchParams.get('blogId') || '').toLowerCase() === POST_OWNER &&
+              u.searchParams.get('logNo') === POST_ID) return 'exact';
+          if (path === '/' && !u.search) return 'origin';
+          return 'other';
+        } catch { return 'other'; }
+      }
+
+      let activeSession = false;
+      try {
+        const t = Number(sessionStorage.getItem(SESSION_KEY));
+        activeSession = Number.isFinite(t) && t > 0 && Date.now() - t >= 0 && Date.now() - t < TTL;
+        if (!activeSession) sessionStorage.removeItem(SESSION_KEY);
+      } catch {}
+      const uri = new URL(location.href);
+      const tagged = uri.searchParams.get('via') === MARKER;
+      const source = sourceType(document.referrer);
+      const allowed = activeSession || source === 'exact' || (source === 'origin' && tagged);
+      document.documentElement.dataset.gate = allowed ? 'allowed' : 'blocked';
+      if (allowed) {
+        try { sessionStorage.setItem(SESSION_KEY,String(Date.now())); } catch {}
+        if (uri.searchParams.has('via')) {
+          try { uri.searchParams.delete('via'); history.replaceState(history.state, '',uri.pathname + uri.search + uri.hash); } catch {}
+        }
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="denied" class="denied">
+    <div class="denied-card" role="main">
+      <div class="lock" aria-hidden="true">🔒</div>
+      <h2>블로그 전용 계산기입니다</h2>
+      <p>주식 평단가 계산기는 지정된 네이버 블로그 글을 통해 접속할 수 있습니다.<br>블로그 게시글에서 <b>계산기 실행하기</b> 링크를 눌러주세요.</p>
+      <a class="btn btn-primary" href="https://blog.naver.com/jinchanuk/224461131306">네이버 블로그 글로 이동</a>
+      <small>브라우저가 유입 정보를 전달하지 않으면 정상 방문도 차단될 수 있습니다.<br>이 기능은 브라우저 기반 제한이며, 서버 인증은 아닙니다.</small>
+    </div>
+  </div>
+
+  <div id="app">
+    <main class="container">
+      <header class="header">
+        <div>
+          <div class="eyebrow">TRADING TOOL · AVERAGE COST</div>
+          <h1>주식 평단가 계산기</h1>
+          <p class="subtitle">분할매수 후 내 평단가를 바로 확인하고, 목표 평단가까지 필요한 수량을 역산하세요.</p>
+        </div>
+        <span class="top-badge">● 네이버 블로그 전용</span>
+      </header>
+
+      <div class="dashboard">
+        <div class="stack">
+          <section class="panel" aria-labelledby="holdings-title">
+            <div class="panel-header"><h2 id="holdings-title"><span class="num">01</span>현재 보유 내역</h2><span class="hint">주식 1종목 기준</span></div>
+            <div class="field" style="margin-bottom:18px">
+              <label for="stockName">종목명 <span class="hint">(선택)</span></label>
+              <div class="field-control"><input id="stockName" type="text" maxlength="35" placeholder="예: 삼성전자" style="text-align:left;font-size:15px;font-weight:650" autocomplete="off"></div>
+            </div>
+            <div class="field-grid">
+              <div class="field"><label for="heldQty">보유 수량</label><div class="field-control"><input id="heldQty" type="number" min="0" step="1" value="120" inputmode="numeric"><span class="suffix">주</span></div></div>
+              <div class="field"><label for="heldAvg">현재 평단가</label><div class="field-control"><input id="heldAvg" type="number" min="0" step="any" value="72500" inputmode="decimal"><span class="suffix">원</span></div></div>
+            </div>
+            <div class="divider"></div>
+            <div class="field-grid">
+              <div class="field"><label for="feeRate">추가 매수 수수료율 <span class="hint">(선택)</span></label><div class="field-control"><input id="feeRate" type="number" min="0" max="100" step="0.001" value="0" inputmode="decimal"><span class="suffix">%</span></div></div>
+              <div class="field"><label for="marketPrice">현재 주가 <span class="hint">(선택)</span></label><div class="field-control"><input id="marketPrice" type="number" min="0" step="any" placeholder="직접 입력" inputmode="decimal"><span class="suffix">원</span></div></div>
+            </div>
+            <p class="small-caption">기존 평단가는 입력한 값을 그대로 사용합니다. 수수료율을 입력하면 <b>추가 매수 비용에만</b> 반영하며, 현재가에 따른 수익률은 세금·매도 수수료를 제외한 참고값입니다.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="buys-title">
+            <div class="panel-header"><h2 id="buys-title"><span class="num">02</span>추가 매수 계획</h2><span class="hint" id="rowCount">1건</span></div>
+            <p class="small-top">추가 매수가와 수량을 입력하세요. 여러 번 매수하는 경우 행을 추가할 수 있습니다.</p>
+            <div class="buy-table" id="buyRows"></div>
+            <div class="row-actions">
+              <button type="button" class="btn btn-primary" id="addBuy">+ 매수 행 추가</button>
+              <button type="button" class="btn btn-ghost" id="resetAll">전체 초기화</button>
+            </div>
+            <p class="small-caption">기본 숫자는 사용법을 보여주는 예시입니다. 수정 내역은 이 브라우저에만 자동 저장됩니다.</p>
+          </section>
+        </div>
+        <div class="stack">
+          <section class="panel value-panel" aria-labelledby="result-title">
+            <div class="panel-header"><h2 id="result-title"><span class="num">03</span>계산 결과</h2><button type="button" class="btn btn-secondary" id="copyResult">결과 복사</button></div>
+            <div class="big-caption">추가 매수 후 예상 평균단가</div>
+            <div class="hero-value"><span id="newAvg">—</span><span class="unit">원</span></div>
+            <div class="comparison"><span>기존 <span id="oldAvg" class="old-price">—</span>원</span><span class="arrow">→</span><span class="delta" id="avgDelta">계산 대기</span></div>
+            <div class="metric-grid">
+              <div class="metric"><div class="metric-title">총 보유 수량</div><div class="metric-value" id="totalQty">— 주</div></div>
+              <div class="metric"><div class="metric-title">총 매입금액</div><div class="metric-value" id="totalCost">— 원</div></div>
+              <div class="metric"><div class="metric-title">추가 매수금액</div><div class="metric-value" id="addedCost">— 원</div></div>
+              <div class="metric"><div class="metric-title">추가 매수 수량</div><div class="metric-value" id="addedQty">— 주</div></div>
+            </div>
+            <div class="profit-box"><span>현재 주가 기준 추정 수익률</span><strong id="profitPercent">현재가 입력 필요</strong></div>
+            <div id="calcWarning" class="warn" role="status"></div>
+            <p class="result-note">평단가 = (기존 보유수량 × 현재 평단가 + 추가 매수금액 + 추가 매수 수수료) ÷ 총 보유수량</p>
+          </section>
+          <section class="panel" aria-labelledby="inverse-title">
+            <div class="panel-header"><h2 id="inverse-title"><span class="num">04</span>목표 평단가 역산</h2><span class="hint">기존 보유 기준</span></div>
+            <p class="small-top">원하는 평단가까지 낮추려면 특정 가격에 몇 주를 추가 매수해야 할까요?</p>
+            <div class="field-grid">
+              <div class="field"><label for="targetAvg">목표 평단가</label><div class="field-control"><input id="targetAvg" type="number" min="0" step="any" placeholder="예: 68,000" inputmode="decimal"><span class="suffix">원</span></div></div>
+              <div class="field"><label for="inverseBuyPrice">추가 매수가</label><div class="field-control"><input id="inverseBuyPrice" type="number" min="0" step="any" placeholder="예: 62,000" inputmode="decimal"><span class="suffix">원</span></div></div>
+            </div>
+            <div class="inverse-output" aria-live="polite">
+              <div class="inverse-top"><span class="big-caption">필요한 최소 추가 매수 수량</span><div class="big" id="requiredQty">— 주</div></div>
+              <div class="sub" id="inverseDesc">목표 평단가와 추가 매수가를 입력하면 계산합니다.</div>
+            </div>
+            <p class="small-caption">주식 수량은 정수(1주 단위)로 올림 계산합니다. 매수 수수료를 적용하면 목표 평단가 달성에 필요한 수량이 달라질 수 있습니다. 실제 주문 가능 금액·호가 단위는 확인하세요.</p>
+          </section>
+        </div>
+      </div>
+      <footer>계산 결과는 참고용이며 실시간 주가를 자동 조회하지 않습니다.<br>투자 판단과 주문은 본인의 책임입니다. · 이 페이지에서 입력한 정보는 서버로 전송하지 않습니다.</footer>
+    </main>
+  </div>
+  <script>
+  (function(){
+    'use strict';
+    if (document.documentElement.dataset.gate !== 'allowed') return;
+    const $ = id => document.getElementById(id);
+    const STORE = 'stock_average_calculator_data_v1';
+    const MAX_ROWS = 20;
+    const DEFAULT = {stockName:'',heldQty:'120',heldAvg:'72500',feeRate:'0',marketPrice:'',targetAvg:'',inverseBuyPrice:'',rows:[{price:'63000',qty:'80'}]};
+    let state = structuredClone(DEFAULT);
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORE));
+      if(stored && typeof stored === 'object') {
+        const rows = Array.isArray(stored.rows) ? stored.rows.slice(0,MAX_ROWS).map(x=>({price:String(x?.price??''),qty:String(x?.qty??'')})) : [];
+        state = {...DEFAULT,...Object.fromEntries(Object.keys(DEFAULT).filter(k=>k!=='rows').map(k=>[k,String(stored[k]??DEFAULT[k])])),rows:rows.length?rows:[{price:'',qty:''}]};
+      }
+    } catch {}
+    const fixed = ['stockName','heldQty','heldAvg','feeRate','marketPrice','targetAvg','inverseBuyPrice'];
+    fixed.forEach(k=>{$(k).value=state[k]});
+
+    function numeric(v) { if(v==='' || v===null || v===undefined) return NaN; return Number(v); }
+    const whole = v => Number.isSafeInteger(v) && v>=0;
+    const okPrice = v => Number.isFinite(v) && v>0 && v<=1e12;
+    const fmt = (n,dp=0) => Number.isFinite(n)? new Intl.NumberFormat('ko-KR',{maximumFractionDigits:dp,minimumFractionDigits:0}).format(n):'—';
+    const fmtMoney = n => fmt(n,Number.isInteger(n)?0:2);
+    function save(){try{localStorage.setItem(STORE,JSON.stringify(state));}catch{}}
+    function makeInput(label,value,field,i,unit){
+      const div=document.createElement('div');div.className='field';
+      const lab=document.createElement('label'); const id='buy-'+field+'-'+i;lab.htmlFor=id;lab.textContent=label;
+      const wrap=document.createElement('div');wrap.className='field-control';
+      const input=document.createElement('input');Object.assign(input,{id,type:'number',min:field==='qty'?'1':'0',step:field==='qty'?'1':'any',value:value});
+      input.setAttribute('inputmode',field==='qty'?'numeric':'decimal'); input.setAttribute('data-index',i);input.setAttribute('data-field',field);
+      const suffix=document.createElement('span');suffix.className='suffix';suffix.textContent=unit;
+      wrap.append(input,suffix);div.append(lab,wrap);return div;
+    }
+    function renderRows(){
+      const host=$('buyRows');host.replaceChildren();
+      state.rows.forEach((row,i)=>{
+        const div=document.createElement('div');div.className='buy-row';
+        const badge=document.createElement('span');badge.className='row-index';badge.textContent=String(i+1).padStart(2,'0');
+        const price=makeInput('매수가',row.price,'price',i,'원');
+        const qty=makeInput('매수 수량',row.qty,'qty',i,'주');
+        const rem=document.createElement('button');rem.type='button';rem.className='icon-button';rem.textContent='×';rem.title=(i+1)+'번 매수 행 삭제';rem.setAttribute('aria-label',rem.title);rem.dataset.remove=String(i);
+        div.append(badge,price,qty,rem);host.append(div);
+      });
+      $('rowCount').textContent=state.rows.length+'건';
+      $('addBuy').disabled=state.rows.length>=MAX_ROWS;
+    }
+    function setText(id,text){$(id).textContent=text;}
+    function warn(text){$('calcWarning').textContent=text;$('calcWarning').classList.toggle('show',!!text);}
+    function calculate(){
+      const qty=numeric(state.heldQty),avg=numeric(state.heldAvg),fee=numeric(state.feeRate);
+      const holdingValid=whole(qty)&&qty<=1e11&&(qty===0||(okPrice(avg))) && (qty===0||Number.isSafeInteger(qty));
+      const feeValid=Number.isFinite(fee)&&fee>=0&&fee<=100;
+      let buyQty=0,buyCost=0,partial=0,broken=0;
+      for (const r of state.rows){
+        if(r.price==='' && r.qty==='') continue;
+        const q=numeric(r.qty), p=numeric(r.price);
+        if(!whole(q)||q===0||q>1e11||!okPrice(p)) { if(r.price==='' || r.qty==='') partial++;else broken++;continue; }
+        buyQty+=q;buyCost+=q*p;
+      }
+      if(!holdingValid||!feeValid||!Number.isSafeInteger(qty+buyQty)||!Number.isFinite(buyCost)||buyCost>9e15){
+        ['newAvg','oldAvg','totalQty','totalCost','addedCost','addedQty'].forEach(id=>setText(id,'—'));
+        setText('avgDelta','입력 확인');setText('profitPercent','—');
+        warn('보유 수량은 0 이상의 정수, 보유 평단가는 양수, 수수료율은 0~100% 범위로 입력해 주세요.');
+        inverse();return;
+      }
+      const totalQty=qty+buyQty;
+      const oldCost=qty*(Number.isFinite(avg)?avg:0);
+      const extraCost=buyCost*(1+fee/100);
+      const cost=oldCost+extraCost;
+      const newAvg=totalQty>0?cost/totalQty:NaN;
+      if(!Number.isFinite(newAvg)||!Number.isFinite(cost)||cost>9e15){warn('숫자가 너무 커서 안전하게 계산할 수 없습니다.');return;}
+      const roundedCurrent=qty>0?avg:NaN;
+      setText('newAvg',fmt(newAvg,2));
+      setText('oldAvg',fmt(roundedCurrent,2));
+      setText('totalQty',fmt(totalQty)+' 주');
+      setText('totalCost',fmtMoney(cost)+' 원');
+      setText('addedCost',fmtMoney(extraCost)+' 원');
+      setText('addedQty',fmt(buyQty)+' 주');
+      let delta='추가 매수 없음';
+      if(qty>0 && buyQty>0) {
+        const diff=newAvg-avg,pct=diff/avg*100;
+        delta=(diff<0?'▼ ':'▲ ')+fmt(Math.abs(diff),2)+'원 ('+(diff<0?'−':'+')+fmt(Math.abs(pct),2)+'%)';
+        if(Math.abs(diff)<0.000000001)delta='변동 없음';
+      } else if (qty===0 && buyQty>0) delta='신규 매수 기준';
+      setText('avgDelta',delta);
+      const mp=numeric(state.marketPrice);const profit=$('profitPercent');
+      profit.className='';
+      if(okPrice(mp)&&totalQty>0){const pct=(mp/newAvg-1)*100;setText('profitPercent',(pct>=0?'+':'')+fmt(pct,2)+'%');profit.classList.add(pct>=0?'positive':'negative');}
+      else setText('profitPercent','현재가 입력 필요');
+      let w='';
+      if(partial||broken)w='입력되지 않았거나 잘못된 추가 매수 행 '+(partial+broken)+'건은 계산에서 제외했습니다.';
+      if(totalQty===0)w='보유 수량 또는 추가 매수 수량을 입력해 주세요.';
+      warn(w);
+      inverse();
+    }
+    function inverse(){
+      const held=numeric(state.heldQty),avg=numeric(state.heldAvg),fee=numeric(state.feeRate);
+      const target=numeric(state.targetAvg), buyPrice=numeric(state.inverseBuyPrice);
+      const output=$('requiredQty');const desc=$('inverseDesc');
+      if(state.targetAvg===''||state.inverseBuyPrice===''){output.textContent='— 주';desc.textContent='목표 평단가와 추가 매수가를 입력하면 계산합니다.';return;}
+      if(!whole(held)||held<=0||!okPrice(avg)){output.textContent='확인 필요';desc.textContent='현재 보유 수량과 평단가를 먼저 입력해 주세요.';return;}
+      if(!Number.isFinite(fee)||fee<0||fee>100||!okPrice(target)||!okPrice(buyPrice)){output.textContent='확인 필요';desc.textContent='목표 평단가, 매수가, 수수료율을 올바르게 입력해 주세요.';return;}
+      const effectiveBuyPrice=buyPrice*(1+fee/100);
+      if(target>=avg){output.textContent='0 주';desc.textContent='현재 평단가가 이미 목표 평단가 이하입니다.';return;}
+      if(effectiveBuyPrice>=target){output.textContent='계산 불가';desc.textContent='수수료를 포함한 추가 매수가가 목표 평단가보다 낮아야 목표까지 낮출 수 있습니다.';return;}
+      let need=Math.ceil(held*(avg-target)/(target-effectiveBuyPrice)-1e-10);
+      if(!Number.isSafeInteger(need)||need>1e11){output.textContent='범위 초과';desc.textContent='필요 수량이 지나치게 많습니다. 목표 평단가를 조정해 주세요.';return;}
+      // 떠 있는 소수점 반올림 오차에 대비, 목표 충족을 실제 계산으로 검증합니다.
+      const averageWith = x => (held*avg+x*effectiveBuyPrice)/(held+x);
+      while(need>0&&averageWith(need-1)<=target)need--;
+      while(averageWith(need)>target&&need<1e11)need++;
+      const cost=need*buyPrice, actual=averageWith(need);
+      output.textContent=fmt(need)+' 주';
+      desc.textContent='추가 주문금액 '+fmtMoney(cost)+'원 · 수수료 포함 예상 평단가 '+fmt(actual,2)+'원 (목표 평단가 '+fmt(target,2)+'원 이하)';
+    }
+    fixed.forEach(k=>{
+      $(k).addEventListener('input',()=>{state[k]=$(k).value;save();calculate()});
+    });
+    $('buyRows').addEventListener('input',e=>{
+      const target=e.target; if(!target.matches('[data-field]'))return;
+      const i=Number(target.dataset.index),field=target.dataset.field;
+      if(!state.rows[i]||!['price','qty'].includes(field))return;
+      state.rows[i][field]=target.value;save();calculate();
+    });
+    $('buyRows').addEventListener('click',e=>{
+      const btn=e.target.closest('button[data-remove]');if(!btn)return;
+      state.rows.splice(Number(btn.dataset.remove),1);
+      if(state.rows.length===0)state.rows.push({price:'',qty:''});
+      renderRows();save();calculate();
+    });
+    $('addBuy').addEventListener('click',()=>{if(state.rows.length>=MAX_ROWS)return;state.rows.push({price:'',qty:''});renderRows();save();calculate();const idx=state.rows.length-1;$('buy-price-'+idx)?.focus();});
+    $('resetAll').addEventListener('click',()=>{
+      if(!confirm('모든 입력 내용과 브라우저에 저장된 계산 내역을 초기화할까요?'))return;
+      state={stockName:'',heldQty:'',heldAvg:'',feeRate:'0',marketPrice:'',targetAvg:'',inverseBuyPrice:'',rows:[{price:'',qty:''}]};
+      fixed.forEach(k=>$(k).value=state[k]);renderRows();save();calculate();
+    });
+    $('copyResult').addEventListener('click',async()=>{
+      const name=(state.stockName||'주식')+' 평단가 계산 결과';
+      const lines=[name,'예상 평단가: '+$('newAvg').textContent+'원','총 보유 수량: '+$('totalQty').textContent,'총 매입금액: '+$('totalCost').textContent,'추가 매수금액: '+$('addedCost').textContent,'추가 매수 수량: '+$('addedQty').textContent];
+      try { await navigator.clipboard.writeText(lines.join('\n'));const b=$('copyResult');b.textContent='복사 완료';setTimeout(()=>b.textContent='결과 복사',1500); }
+      catch { window.prompt('아래 내용을 복사하세요.',lines.join('\n')); }
+    });
+    renderRows();calculate();
+  })();
+  </script>
+</body>
+</html>
